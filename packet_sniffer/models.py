@@ -12,6 +12,7 @@ class PacketEvent:
     dst_ip: str
     size: int
     summary: str
+    exchange: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)

@@ -81,6 +81,19 @@ sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --bpf "icmp or arp" --live
 - DHCP
 - DNS
 
+## Trocas características (automático)
+
+O sniffer identifica automaticamente estas trocas e anexa no output em `exchange`:
+
+- `TCP handshake completo ...` quando deteta `SYN -> SYN-ACK -> ACK`
+- `ICMP request/reply completo ...` quando deteta `echo request -> echo reply`
+
+Exemplo rápido (ICMP):
+
+```bash
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --proto ICMP --live --count 20
+```
+
 ## Exemplo para CORE
 
 No CORE, identificar a interface do nó onde o sniffer corre e usar o mesmo comando:

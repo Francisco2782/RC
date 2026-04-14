@@ -30,6 +30,7 @@ class OutputManager:
                         "dst_ip",
                         "size",
                         "summary",
+                        "exchange",
                     ],
                 )
                 self._csv_writer.writeheader()
@@ -40,10 +41,11 @@ class OutputManager:
 
     def write(self, event: PacketEvent):
         if self.live:
+            exchange_suffix = f" | {event.exchange}" if event.exchange else ""
             print(
                 f"[{event.timestamp}] {event.interface} {event.protocol:<6} "
                 f"{event.src_ip} -> {event.dst_ip} "
-                f"({event.size}B) {event.summary}"
+                f"({event.size}B) {event.summary}{exchange_suffix}"
             )
 
         if not self.log_path:
@@ -57,7 +59,8 @@ class OutputManager:
             with self.log_path.open("a", encoding="utf-8") as log_file:
                 log_file.write(
                     f"[{event.timestamp}] {event.interface} {event.protocol} "
-                    f"{event.src_ip}->{event.dst_ip} {event.size}B {event.summary}\n"
+                    f"{event.src_ip}->{event.dst_ip} {event.size}B {event.summary}"
+                    f" {'| ' + event.exchange if event.exchange else ''}\n"
                 )
         elif self.log_format == "csv" and self._csv_writer:
             self._csv_writer.writerow(payload)

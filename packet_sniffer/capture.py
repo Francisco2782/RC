@@ -3,6 +3,7 @@ from argparse import Namespace
 from scapy.all import sniff
 from scapy.error import Scapy_Exception
 
+from .exchanges import ExchangeTracker
 from .filters import matches_filters
 from .output import OutputManager
 from .parser import parse_packet
@@ -10,9 +11,11 @@ from .parser import parse_packet
 
 def run_capture(args: Namespace):
     output = OutputManager(live=args.live, log_path=args.log, log_format=args.format)
+    exchanges = ExchangeTracker()
 
     def handle_packet(packet):
         event = parse_packet(packet, args.iface)
+        event.exchange = exchanges.detect(packet)
         if matches_filters(event, args):
             output.write(event)
 
