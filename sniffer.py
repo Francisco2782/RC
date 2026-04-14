@@ -2,8 +2,6 @@
 import argparse
 import os
 
-from packet_sniffer import run_capture
-
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Packet Sniffer MVP (RC TP2)")
@@ -39,7 +37,20 @@ def main():
     if os.geteuid() != 0:
         print("[Aviso] Captura em interface real normalmente exige permissões root.")
 
-    run_capture(args)
+    try:
+        from packet_sniffer import run_capture
+    except ModuleNotFoundError as error:
+        if error.name == "scapy":
+            print("[Erro] O módulo 'scapy' não está disponível neste Python.")
+            print("Use o interpretador da venv: sudo ./.venv/bin/python sniffer.py ...")
+            raise SystemExit(1)
+        raise
+
+    try:
+        run_capture(args)
+    except RuntimeError as error:
+        print(f"[Erro] {error}")
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
