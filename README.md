@@ -17,24 +17,32 @@ pip install -r requirements.txt
 
 ## Execução
 
+Antes de correr, confirma o nome da interface:
+
+```bash
+ip -br link
+```
+
+Exemplos comuns: `wlp60s0` (Wi-Fi), `enp61s0` (Ethernet).
+
 ### Modo live (consola)
 
 ```bash
-sudo python sniffer.py --iface eth0 --live
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live
 ```
 
 ### Modo log (JSON, CSV ou TXT)
 
 ```bash
-sudo python sniffer.py --iface eth0 --log logs/capture.json --format json
-sudo python sniffer.py --iface eth0 --log logs/capture.csv --format csv
-sudo python sniffer.py --iface eth0 --log logs/capture.txt --format txt
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --log logs/capture.json --format json
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --log logs/capture.csv --format csv
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --log logs/capture.txt --format txt
 ```
 
 ### Live + log em simultâneo
 
 ```bash
-sudo python sniffer.py --iface eth0 --live --log logs/capture.json --format json
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live --log logs/capture.json --format json
 ```
 
 ## Filtros
@@ -42,25 +50,25 @@ sudo python sniffer.py --iface eth0 --live --log logs/capture.json --format json
 - Por protocolo:
 
 ```bash
-sudo python sniffer.py --iface eth0 --proto ICMP --live
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --proto ICMP --live
 ```
 
 - Por IP:
 
 ```bash
-sudo python sniffer.py --iface eth0 --ip 10.0.0.2 --live
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --ip 10.0.0.2 --live
 ```
 
 - Por MAC:
 
 ```bash
-sudo python sniffer.py --iface eth0 --mac aa:bb:cc:dd:ee:ff --live
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --mac aa:bb:cc:dd:ee:ff --live
 ```
 
 - Por BPF:
 
 ```bash
-sudo python sniffer.py --iface eth0 --bpf "icmp or arp" --live
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --bpf "icmp or arp" --live
 ```
 
 ## Protocolos já identificados
@@ -78,7 +86,7 @@ sudo python sniffer.py --iface eth0 --bpf "icmp or arp" --live
 No CORE, identificar a interface do nó onde o sniffer corre e usar o mesmo comando:
 
 ```bash
-sudo python sniffer.py --iface eth0 --live --log logs/core.json --format json
+sudo ./.venv/bin/python sniffer.py --iface eth0 --live --log logs/core.json --format json
 ```
 
 ## Nota de segurança
