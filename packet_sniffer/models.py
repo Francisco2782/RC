@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass
 
 @dataclass
 class PacketEvent:
+    capture_id: int
     timestamp: str
     interface: str
     protocol: str
@@ -12,6 +13,7 @@ class PacketEvent:
     dst_ip: str
     size: int
     summary: str
+    reply_to_id: int | None
 
     def to_dict(self) -> dict:
         return asdict(self)

@@ -6,6 +6,7 @@ Sniffer mínimo em Python para o trabalho de Redes de Computadores.
 
 - Python 3.10+
 - Permissões root para captura em interface real
+- Interface válida (descobrir com `ip -br a`)
 
 ## Instalação
 
