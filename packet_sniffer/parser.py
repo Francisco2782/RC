@@ -76,17 +76,24 @@ def _extract_flow_metadata(packet, protocol: str, src_ip: str, dst_ip: str, src_
 def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
     protocol = "UNKNOWN"
     summary = "Unknown packet"
+    l2_protocol = "-"
+    l3_protocol = "-"
+    l4_protocol = "-"
 
     src_mac = "-"
     dst_mac = "-"
     src_ip = "-"
     dst_ip = "-"
+    src_port = None
+    dst_port = None
 
     if Ether in packet:
+        l2_protocol = "Ethernet"
         src_mac = packet[Ether].src
         dst_mac = packet[Ether].dst
 
     if IP in packet:
+        l3_protocol = "IPv4"
         src_ip = packet[IP].src
         dst_ip = packet[IP].dst
     elif Ether in packet:
@@ -95,17 +102,27 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
 
     if ARP in packet:
         protocol = "ARP"
+        l3_protocol = "ARP"
         op = packet[ARP].op
         summary = "ARP request" if op == 1 else "ARP reply" if op == 2 else f"ARP op={op}"
     elif DHCP in packet:
         protocol = "DHCP"
+        l4_protocol = "UDP"
+        if UDP in packet:
+            src_port = int(packet[UDP].sport)
+            dst_port = int(packet[UDP].dport)
         msg_type = _extract_dhcp_message(packet)
         summary = f"DHCP {msg_type}" if msg_type else "DHCP"
     elif DNS in packet:
         protocol = "DNS"
+        l4_protocol = "UDP"
+        if UDP in packet:
+            src_port = int(packet[UDP].sport)
+            dst_port = int(packet[UDP].dport)
         summary = "DNS query" if packet[DNS].qr == 0 else "DNS response"
     elif ICMP in packet:
         protocol = "ICMP"
+        l4_protocol = "ICMP"
         icmp_type = packet[ICMP].type
         if icmp_type == 8:
             summary = "ICMP echo request"
@@ -115,10 +132,16 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
             summary = f"ICMP type={icmp_type}"
     elif TCP in packet:
         protocol = "TCP"
+        l4_protocol = "TCP"
+        src_port = int(packet[TCP].sport)
+        dst_port = int(packet[TCP].dport)
         flags = packet[TCP].sprintf("%TCP.flags%")
         summary = f"TCP {packet[TCP].sport} -> {packet[TCP].dport} flags={flags}"
     elif UDP in packet:
         protocol = "UDP"
+        l4_protocol = "UDP"
+        src_port = int(packet[UDP].sport)
+        dst_port = int(packet[UDP].dport)
         summary = f"UDP {packet[UDP].sport} -> {packet[UDP].dport}"
     elif IP in packet:
         protocol = "IPv4"
@@ -127,6 +150,11 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
         protocol = "Ethernet"
         summary = "Ethernet frame"
 
+    layer_summary = f"L2={l2_protocol} L3={l3_protocol} L4={l4_protocol}"
+    if src_port is not None and dst_port is not None:
+        layer_summary += f" ports={src_port}->{dst_port}"
+    summary = f"{layer_summary} | {summary}"
+
     message_type, correlation_key = _extract_flow_metadata(packet, protocol, src_ip, dst_ip, src_mac, dst_mac)
 
     event = PacketEvent(
@@ -134,10 +162,15 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
         timestamp=_format_timestamp(float(packet.time)),
         interface=interface,
         protocol=protocol,
+        l2_protocol=l2_protocol,
+        l3_protocol=l3_protocol,
+        l4_protocol=l4_protocol,
         src_mac=src_mac,
         dst_mac=dst_mac,
         src_ip=src_ip,
         dst_ip=dst_ip,
+        src_port=src_port,
+        dst_port=dst_port,
         size=len(bytes(packet)),
         summary=summary,
         reply_to_id=None,

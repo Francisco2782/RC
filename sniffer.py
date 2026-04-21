@@ -11,6 +11,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--proto", help="Filtro por protocolo (ARP, IPv4, ICMP, TCP, UDP, DHCP, DNS)")
     parser.add_argument("--ip", help="Filtro por IP (origem ou destino)")
     parser.add_argument("--mac", help="Filtro por MAC (origem ou destino)")
+    parser.add_argument(
+        "--hfilter",
+        default="",
+        help=(
+            "Filtro de campos de cabeçalho (estilo Wireshark), "
+            "ex: 'ip.src==10.0.0.2 and tcp.dstport==443'"
+        ),
+    )
     parser.add_argument("--bpf", default="", help="Expressão BPF (ex: 'icmp or arp')")
     parser.add_argument("--live", action="store_true", help="Mostrar em tempo real na consola")
     parser.add_argument("--log", help="Caminho do ficheiro de log")

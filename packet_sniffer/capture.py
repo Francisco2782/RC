@@ -42,7 +42,7 @@ def run_capture(args: Namespace):
         else:
             event.summary = f"capture(id={event.capture_id}) {src} -> {dst} | {event.summary}"
 
-        if matches_filters(event, args):
+        if matches_filters(packet, event, args):
             output.write(event)
 
     try:
