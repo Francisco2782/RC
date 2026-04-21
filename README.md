@@ -86,15 +86,45 @@ sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --mac aa:bb:cc:dd:ee:ff --liv
 sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --bpf "icmp or arp" --live
 ```
 
+### Por campos de cabeçalho (estilo Wireshark)
+
+```bash
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --hfilter "ip.src==172.26.22.44 and tcp.dstport==443" --live
+```
+
+Campos suportados:
+- `eth.src`, `eth.dst`
+- `ip.src`, `ip.dst`
+- `tcp.srcport`, `tcp.dstport`
+- `udp.srcport`, `udp.dstport`
+- `icmp.type`, `icmp.code`
+- `dns.id`, `dns.qr`, `dns.opcode`
+- `arp.op`
+- `frame.len`, `frame.interface`
+- `l2`, `l3`, `l4`, `proto`
+
+Operadores:
+- comparação: `==`, `!=`, `>`, `<`, `>=`, `<=`
+- lógicos: `and`, `or`, `not` (também `&&`, `||`, `!`)
+- parêntesis: `(` `)`
+
+Exemplos:
+
+```bash
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --hfilter "dns and dns.qr==0" --live
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --hfilter "tcp and (tcp.dstport==80 or tcp.dstport==443)" --live
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --hfilter "arp and arp.op==1" --live
+```
+
 ## 7) Formato da captura
 
 - Cada pacote recebe `capture_id` sequencial.
-- O campo `summary` inclui contexto request/reply e IDs correlacionados quando aplicável.
+- O campo `summary` mostra L2/L3/L4 (e portas quando existirem), além de contexto request/reply com IDs correlacionados.
 - Quando não existir IP, são usados MAC de origem/destino em `src_ip` e `dst_ip`.
 
 Exemplo de `summary`:
-- `request(id=15) 172.26.22.44 -> 193.137.16.65 | DNS query`
-- `reply(id=16) ao request(id=15) 193.137.16.65 -> 172.26.22.44 | DNS response`
+- `request(id=15) 172.26.22.44 -> 193.137.16.65 | L2=Ethernet L3=IPv4 L4=UDP ports=51020->53 | DNS query`
+- `reply(id=16) ao request(id=15) 193.137.16.65 -> 172.26.22.44 | L2=Ethernet L3=IPv4 L4=UDP ports=53->51020 | DNS response`
 
 ## 8) Logs (json/csv/txt)
 

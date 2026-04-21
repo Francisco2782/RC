@@ -7,10 +7,15 @@ class PacketEvent:
     timestamp: str
     interface: str
     protocol: str
+    l2_protocol: str
+    l3_protocol: str
+    l4_protocol: str
     src_mac: str
     dst_mac: str
     src_ip: str
     dst_ip: str
+    src_port: int | None
+    dst_port: int | None
     size: int
     summary: str
     reply_to_id: int | None
