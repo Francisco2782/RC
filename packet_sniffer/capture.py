@@ -1,6 +1,7 @@
 from argparse import Namespace
 
 from scapy.all import get_if_list, sniff
+from scapy.error import Scapy_Exception
 
 from .filters import matches_filters
 from .output import OutputManager
@@ -52,13 +53,17 @@ def run_capture(args: Namespace):
             store=False,
             count=args.count,
         )
+    except PermissionError as exc:
+        raise RuntimeError(
+            "Permissão insuficiente para capturar pacotes. Execute com sudo/root."
+        ) from exc
+    except Scapy_Exception as exc:
+        raise RuntimeError(
+            f"Erro de captura na interface '{args.iface}'. Confirme o nome com 'ip -br link'."
+        ) from exc
     except ValueError as exc:
-        message = str(exc)
-        if "Interface" in message and "not found" in message:
-            interfaces = ", ".join(get_if_list())
-            print(f"[Erro] Interface '{args.iface}' não encontrada.")
-            print(f"[Info] Interfaces disponíveis: {interfaces}")
-            return
-        raise
+        raise RuntimeError(
+            f"Interface '{args.iface}' não encontrada. Verifique com 'ip -br link' e use uma interface válida."
+        ) from exc
     finally:
         output.close()
