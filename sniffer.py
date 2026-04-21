@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import os
+import sys
+from pathlib import Path
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -41,6 +43,11 @@ def main():
         from packet_sniffer import run_capture
     except ModuleNotFoundError as error:
         if error.name == "scapy":
+            venv_python = Path(__file__).resolve().parent / ".venv" / "bin" / "python"
+            if venv_python.exists() and os.access(venv_python, os.X_OK):
+                print("[Info] 'scapy' não encontrado neste Python. A tentar relançar com .venv...")
+                os.execv(str(venv_python), [str(venv_python), str(Path(__file__).resolve()), *sys.argv[1:]])
+
             print("[Erro] O módulo 'scapy' não está disponível neste Python.")
             print("Use o interpretador da venv: sudo ./.venv/bin/python sniffer.py ...")
             raise SystemExit(1)

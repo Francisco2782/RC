@@ -1,6 +1,6 @@
 from argparse import Namespace
 
-from scapy.all import get_if_list, sniff
+from scapy.all import sniff
 from scapy.error import Scapy_Exception
 
 from .filters import matches_filters
