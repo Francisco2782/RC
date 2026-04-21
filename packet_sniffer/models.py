@@ -7,6 +7,7 @@ class PacketEvent:
     timestamp: str
     interface: str
     protocol: str
+    used_level: int
     l2_protocol: str
     l3_protocol: str
     l4_protocol: str

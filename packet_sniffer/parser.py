@@ -102,7 +102,6 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
 
     if ARP in packet:
         protocol = "ARP"
-        l3_protocol = "ARP"
         op = packet[ARP].op
         summary = "ARP request" if op == 1 else "ARP reply" if op == 2 else f"ARP op={op}"
     elif DHCP in packet:
@@ -150,10 +149,19 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
         protocol = "Ethernet"
         summary = "Ethernet frame"
 
-    layer_summary = f"L2={l2_protocol} L3={l3_protocol} L4={l4_protocol}"
+    if l4_protocol != "-":
+        used_level = 4
+    elif l3_protocol != "-":
+        used_level = 3
+    elif l2_protocol != "-":
+        used_level = 2
+    else:
+        used_level = 0
+
+    level_summary = f"Nível={used_level}"
     if src_port is not None and dst_port is not None:
-        layer_summary += f" ports={src_port}->{dst_port}"
-    summary = f"{layer_summary} | {summary}"
+        level_summary += f" ports={src_port}->{dst_port}"
+    summary = f"{level_summary} | {summary}"
 
     message_type, correlation_key = _extract_flow_metadata(packet, protocol, src_ip, dst_ip, src_mac, dst_mac)
 
@@ -162,6 +170,7 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
         timestamp=_format_timestamp(float(packet.time)),
         interface=interface,
         protocol=protocol,
+        used_level=used_level,
         l2_protocol=l2_protocol,
         l3_protocol=l3_protocol,
         l4_protocol=l4_protocol,
