@@ -47,6 +47,7 @@ def _extract_field(packet, event: PacketEvent, field: str) -> Any:
         "dns.id": int(packet[DNS].id) if DNS in packet else None,
         "dns.qr": int(packet[DNS].qr) if DNS in packet else None,
         "dns.opcode": int(packet[DNS].opcode) if DNS in packet else None,
+        "level": event.used_level,
         "l2": event.l2_protocol,
         "l3": event.l3_protocol,
         "l4": event.l4_protocol,

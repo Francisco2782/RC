@@ -101,6 +101,7 @@ Campos suportados:
 - `dns.id`, `dns.qr`, `dns.opcode`
 - `arp.op`
 - `frame.len`, `frame.interface`
+- `level`
 - `l2`, `l3`, `l4`, `proto`
 
 Operadores:
@@ -119,12 +120,12 @@ sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --hfilter "arp and arp.op==1"
 ## 7) Formato da captura
 
 - Cada pacote recebe `capture_id` sequencial.
-- O campo `summary` mostra L2/L3/L4 (e portas quando existirem), além de contexto request/reply com IDs correlacionados.
+- O campo `summary` mostra o nível efetivamente usado no pacote (`Nível=2`, `Nível=3` ou `Nível=4`) e portas quando existirem.
 - Quando não existir IP, são usados MAC de origem/destino em `src_ip` e `dst_ip`.
 
 Exemplo de `summary`:
-- `request(id=15) 172.26.22.44 -> 193.137.16.65 | L2=Ethernet L3=IPv4 L4=UDP ports=51020->53 | DNS query`
-- `reply(id=16) ao request(id=15) 193.137.16.65 -> 172.26.22.44 | L2=Ethernet L3=IPv4 L4=UDP ports=53->51020 | DNS response`
+- `request(id=15) 172.26.22.44 -> 193.137.16.65 | Nível=4 ports=51020->53 | DNS query`
+- `reply(id=16) ao request(id=15) 193.137.16.65 -> 172.26.22.44 | Nível=4 ports=53->51020 | DNS response`
 
 ## 8) Logs (json/csv/txt)
 

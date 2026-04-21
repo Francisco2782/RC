@@ -26,6 +26,7 @@ class OutputManager:
                         "timestamp",
                         "interface",
                         "protocol",
+                        "used_level",
                         "l2_protocol",
                         "l3_protocol",
                         "l4_protocol",
