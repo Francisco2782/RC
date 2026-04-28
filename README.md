@@ -32,6 +32,20 @@ Exemplos comuns:
 sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live
 ```
 
+### Atalhos com `make`
+
+```bash
+make menu
+make live IFACE=eth0
+make log IFACE=eth0
+```
+
+Se quiseres mudar o formato do log:
+
+```bash
+make log IFACE=eth0 FORMAT=csv LOG=logs/capture.csv
+```
+
 ## 5) Modos de execução
 
 ### Live (consola)
@@ -53,6 +67,22 @@ sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --log logs/capture.txt --form
 ```bash
 sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live --log logs/capture.json --format json
 ```
+
+### Menu interativo no terminal
+
+```bash
+sudo ./.venv/bin/python sniffer.py --menu
+```
+
+Neste modo escolhes tudo por números:
+- interface
+- modo de saída
+- protocolo
+- IP
+- MAC
+- BPF
+- hfilter
+- número de pacotes
 
 ### Captura limitada (teste)
 

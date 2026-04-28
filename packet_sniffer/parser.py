@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 
 from scapy.all import ARP, BOOTP, DHCP, DNS, ICMP, IP, IPv6, TCP, UDP, Ether
