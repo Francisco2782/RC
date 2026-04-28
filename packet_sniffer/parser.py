@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from scapy.all import ARP, BOOTP, DHCP, DNS, ICMP, IP, TCP, UDP, Ether
+from scapy.all import ARP, BOOTP, DHCP, DNS, ICMP, IP, IPv6, TCP, UDP, Ether
 
 from .models import PacketEvent
 
@@ -96,6 +96,10 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
         l3_protocol = "IPv4"
         src_ip = packet[IP].src
         dst_ip = packet[IP].dst
+    elif IPv6 in packet:
+        l3_protocol = "IPv6"
+        src_ip = packet[IPv6].src
+        dst_ip = packet[IPv6].dst
     elif Ether in packet:
         src_ip = src_mac
         dst_ip = dst_mac
@@ -118,7 +122,12 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
         if UDP in packet:
             src_port = int(packet[UDP].sport)
             dst_port = int(packet[UDP].dport)
-        summary = "DNS query" if packet[DNS].qr == 0 else "DNS response"
+        
+        if packet[DNS].qd:
+            qname = packet[DNS].qd.qname.decode(errors="replace").rstrip(".")
+            summary = f"DNS {'query' if packet[DNS].qr == 0 else 'response'} {qname}"
+        else:
+            summary = "DNS query" if packet[DNS].qr == 0 else "DNS response"
     elif ICMP in packet:
         protocol = "ICMP"
         l4_protocol = "ICMP"
@@ -130,12 +139,18 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
         else:
             summary = f"ICMP type={icmp_type}"
     elif TCP in packet:
-        protocol = "TCP"
         l4_protocol = "TCP"
         src_port = int(packet[TCP].sport)
         dst_port = int(packet[TCP].dport)
         flags = packet[TCP].sprintf("%TCP.flags%")
-        summary = f"TCP {packet[TCP].sport} -> {packet[TCP].dport} flags={flags}"
+        fmap={"F":"FIN","S":"SYN","R":"RST","P":"PSH","A":"ACK","U":"URG"}
+        flag_str="+".join(v for k,v in fmap.items() if k in flags) or flags
+        if src_port in (80,8080,443) or dst_port in (80,8080,443):
+            protocol = "HTTP"
+            summary = f"HTTP {'response' if src_port in (80,8080,443) else 'request'} {src_port} -> {dst_port}"
+        else:
+            protocol = "TCP"
+            summary = f"TCP {src_port} -> {dst_port} [{flag_str}]"
     elif UDP in packet:
         protocol = "UDP"
         l4_protocol = "UDP"
@@ -145,6 +160,9 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
     elif IP in packet:
         protocol = "IPv4"
         summary = "IPv4 packet"
+    elif IPv6 in packet:
+        protocol = "IPv6"
+        summary = "IPv6 packet"
     elif Ether in packet:
         protocol = "Ethernet"
         summary = "Ethernet frame"
