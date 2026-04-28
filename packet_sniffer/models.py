@@ -1,4 +1,5 @@
 from dataclasses import asdict, dataclass
+from typing import Optional
 
 
 @dataclass
@@ -15,11 +16,11 @@ class PacketEvent:
     dst_mac: str
     src_ip: str
     dst_ip: str
-    src_port: int | None
-    dst_port: int | None
+    src_port: Optional[int]
+    dst_port: Optional[int]
     size: int
     summary: str
-    reply_to_id: int | None
+    reply_to_id: Optional[int]
 
     def to_dict(self) -> dict:
         return asdict(self)
