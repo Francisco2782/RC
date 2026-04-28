@@ -1,3 +1,4 @@
+from collections import Counter
 from argparse import Namespace
 
 from scapy.all import sniff
@@ -12,6 +13,7 @@ def run_capture(args: Namespace):
     output = OutputManager(live=args.live, log_path=args.log, log_format=args.format)
     request_ids: dict[str, int] = {}
     capture_counter = 0
+    proto_counter = Counter()
 
     def endpoint(ip: str, mac: str) -> str:
         return ip if ip != "-" else mac
@@ -43,6 +45,7 @@ def run_capture(args: Namespace):
             event.summary = f"capture(id={event.capture_id}) {src} -> {dst} | {event.summary}"
 
         if matches_filters(packet, event, args):
+            proto_counter[event.protocol] += 1
             output.write(event)
 
     try:
@@ -53,6 +56,8 @@ def run_capture(args: Namespace):
             store=False,
             count=args.count,
         )
+    except KeyboardInterrupt:
+        print("\n[Info] Captura interrompida pelo utilizador.")
     except PermissionError as exc:
         raise RuntimeError(
             "Permissão insuficiente para capturar pacotes. Execute com sudo/root."
@@ -66,4 +71,5 @@ def run_capture(args: Namespace):
             f"Interface '{args.iface}' não encontrada. Verifique com 'ip -br link' e use uma interface válida."
         ) from exc
     finally:
+        output.print_stats(proto_counter)
         output.close()

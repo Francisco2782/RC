@@ -37,12 +37,24 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def validate_interface(iface:str):
+    import subprocess
+    result=subprocess.run(["ip","-br","link"],capture_output=True,text=True)
+    if result.returncode==0:
+        ifaces=[line.split()[0] for line in result.stdout.strip().splitlines() if line.strip()]
+        if iface not in ifaces:
+            print(f"[Erro] Interface '{iface}' não encontrada.")
+            print(f"Interfaces disponíveis: {', ' .join(ifaces)}")
+            raise SystemExit(1)
+
 def main():
     parser = build_parser()
     args = parser.parse_args()
 
     if not args.live and not args.log:
         args.live = True
+
+    validate_interface(args.iface)
 
     if os.geteuid() != 0:
         print("[Aviso] Captura em interface real normalmente exige permissões root.")

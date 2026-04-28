@@ -1,77 +1,136 @@
-import csv
 import json
-from pathlib import Path
+import csv
+from datetime import datetime
 
-from .models import PacketEvent
+
+class Colors:
+    RESET = "\033[0m"
+    RED = "\033[91m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    MAGENTA = "\033[95m"
+    CYAN = "\033[96m"
+    WHITE = "\033[97m"
 
 
 class OutputManager:
-    def __init__(self, live: bool, log_path: str | None = None, log_format: str = "json"):
+    def __init__(
+        self,
+        live=True,
+        log_path=None,
+        log_format="json",
+        txt_file=None,
+        json_file=None,
+        csv_file=None,
+    ):
         self.live = live
-        self.log_path = Path(log_path) if log_path else None
-        self.log_format = log_format
-        self._csv_writer = None
-        self._csv_file = None
-        self._log_file = None
 
-        if self.log_path:
-            self.log_path.parent.mkdir(parents=True, exist_ok=True)
+        if log_path:
+            if log_format == "txt":
+                txt_file = log_path
+            elif log_format == "json":
+                json_file = log_path
+            elif log_format == "csv":
+                csv_file = log_path
 
-            if self.log_format == "csv":
-                self._csv_file = self.log_path.open("w", newline="", encoding="utf-8")
-                self._csv_writer = csv.DictWriter(
-                    self._csv_file,
-                    fieldnames=[
-                        "capture_id",
-                        "timestamp",
-                        "interface",
-                        "protocol",
-                        "used_level",
-                        "l2_protocol",
-                        "l3_protocol",
-                        "l4_protocol",
-                        "src_mac",
-                        "dst_mac",
-                        "src_ip",
-                        "dst_ip",
-                        "src_port",
-                        "dst_port",
-                        "size",
-                        "summary",
-                        "reply_to_id",
-                    ],
-                )
-                self._csv_writer.writeheader()
-            elif self.log_format in {"json", "txt"}:
-                self._log_file = self.log_path.open("w", encoding="utf-8")
+        self.txt = open(txt_file, "w") if txt_file else None
+        self.json = open(json_file, "w") if json_file else None
+        self.csv = open(csv_file, "w", newline="") if csv_file else None
 
-    def close(self):
-        if self._csv_file:
-            self._csv_file.close()
-        if self._log_file:
-            self._log_file.close()
+        self.json_data = []
 
-    def write(self, event: PacketEvent):
-        if self.live:
-            print(
-                f"#{event.capture_id} [{event.timestamp}] {event.interface} {event.protocol:<6} "
-                f"{event.src_ip} -> {event.dst_ip} "
-                f"({event.size}B) {event.summary}"
+        if self.csv:
+            self.writer = csv.writer(self.csv)
+            self.writer.writerow(
+                [
+                    "time",
+                    "protocol",
+                    "src_ip",
+                    "dst_ip",
+                    "summary",
+                ]
             )
 
-        if not self.log_path:
+        if self.live:
+            self.print_header()
+
+    def print_header(self):
+        print(
+            Colors.WHITE
+            + f"{'TIME':<10} {'SOURCE':<18} {'DESTINATION':<18} {'PROTO':<8} INFO"
+            + Colors.RESET
+        )
+        print("-" * 80)
+
+    def get_color(self, protocol):
+        table = {
+            "TCP": Colors.BLUE,
+            "UDP": Colors.CYAN,
+            "HTTP": Colors.GREEN,
+            "DNS": Colors.MAGENTA,
+            "ICMP": Colors.YELLOW,
+            "ARP": Colors.WHITE,
+            "DHCP": Colors.RED,
+            "IPv6": Colors.YELLOW,
+        }
+
+        return table.get(protocol, Colors.WHITE)
+
+    def write(self, event):
+        now = datetime.now().strftime("%H:%M:%S")
+
+        src = event.src_ip if event.src_ip else "-"
+        dst = event.dst_ip if event.dst_ip else "-"
+
+        line = f"{now:<10} {src:<18} {dst:<18} {event.protocol:<8} {event.summary}"
+
+        if self.live:
+            color = self.get_color(event.protocol)
+            print(color + line + Colors.RESET)
+
+        if self.txt:
+            self.txt.write(line + "\n")
+
+        if self.json:
+            self.json_data.append(
+                {
+                    "time": now,
+                    "protocol": event.protocol,
+                    "src_ip": src,
+                    "dst_ip": dst,
+                    "summary": event.summary,
+                }
+            )
+
+        if self.csv:
+            self.writer.writerow(
+                [
+                    now,
+                    event.protocol,
+                    src,
+                    dst,
+                    event.summary,
+                ]
+            )
+
+    def print_stats(self, counter):
+        if not self.live:
             return
 
-        payload = event.to_dict()
-        if self.log_format == "json" and self._log_file:
-            self._log_file.write(json.dumps(payload, ensure_ascii=False) + "\n")
-            self._log_file.flush()
-        elif self.log_format == "txt" and self._log_file:
-            self._log_file.write(
-                f"#{event.capture_id} [{event.timestamp}] {event.interface} {event.protocol} "
-                f"{event.src_ip}->{event.dst_ip} {event.size}B {event.summary}\n"
-            )
-            self._log_file.flush()
-        elif self.log_format == "csv" and self._csv_writer:
-            self._csv_writer.writerow(payload)
-            self._csv_file.flush()
+        print("\n--- Estatísticas ---")
+
+        for proto, count in sorted(counter.items(), key=lambda x: -x[1]):
+            color = self.get_color(proto)
+            print(color + f"{proto:<10}: {count}" + Colors.RESET)
+
+    def close(self):
+        if self.txt:
+            self.txt.close()
+
+        if self.json:
+            json.dump(self.json_data, self.json, indent=4)
+            self.json.close()
+
+        if self.csv:
+            self.csv.close()
