@@ -13,9 +13,11 @@ from .parser import parse_packet
 
 def run_capture(args: Namespace):
     output = OutputManager(live=args.live, log_path=args.log, log_format=args.format)
-    request_ids: dict[str, int] = {}
+    request_states: dict[str, tuple[int, float]] = {}
     capture_counter = 0
     proto_counter = Counter()
+    captured_events = []
+    plot_kinds = getattr(args, "plots", None) or ([] if getattr(args, "plot", None) is None else [args.plot])
 
     def endpoint(ip: str, mac: str) -> str:
         return ip if ip != "-" else mac
@@ -31,15 +33,18 @@ def run_capture(args: Namespace):
         dst = endpoint(event.dst_ip, event.dst_mac)
 
         if message_type == "request" and correlation_key:
-            request_ids[correlation_key] = event.capture_id
+            request_states[correlation_key] = (event.capture_id, event.packet_time)
             event.summary = f"request(id={event.capture_id}) {src} -> {dst} | {event.summary}"
         elif message_type == "reply" and correlation_key:
-            matched_request_id = request_ids.get(correlation_key)
+            matched_request = request_states.get(correlation_key)
+            matched_request_id = matched_request[0] if matched_request else None
             event.reply_to_id = matched_request_id
-            if matched_request_id is not None:
+            if matched_request is not None:
+                request_id, request_time = matched_request
+                event.rtt_ms = max((event.packet_time - request_time) * 1000.0, 0.0)
                 event.summary = (
-                    f"reply(id={event.capture_id}) ao request(id={matched_request_id}) "
-                    f"{src} -> {dst} | {event.summary}"
+                    f"reply(id={event.capture_id}) ao request(id={request_id}) "
+                    f"{src} -> {dst} | RTT={event.rtt_ms:.3f} ms | {event.summary}"
                 )
             else:
                 event.summary = f"reply(id={event.capture_id}) sem request conhecido {src} -> {dst} | {event.summary}"
@@ -47,7 +52,10 @@ def run_capture(args: Namespace):
             event.summary = f"capture(id={event.capture_id}) {src} -> {dst} | {event.summary}"
 
         if matches_filters(packet, event, args):
+            if args.proto and args.proto.upper() in {"IP", "IPV4"}:
+                event.protocol = "IPv4"
             proto_counter[event.protocol] += 1
+            captured_events.append(event)
             output.write(event)
 
     try:
@@ -75,3 +83,19 @@ def run_capture(args: Namespace):
     finally:
         output.print_stats(proto_counter)
         output.close()
+
+        if plot_kinds:
+            try:
+                from .plots import plot_capture
+            except ModuleNotFoundError as exc:
+                if exc.name == "matplotlib":
+                    print("[Erro] O módulo 'matplotlib' não está disponível. Instala-o para usar gráficos.")
+                    return
+                raise
+
+            for kind in plot_kinds:
+                try:
+                    prefix = f"capture_{args.iface}_{len(captured_events)}pkts"
+                    plot_capture(captured_events, kind, getattr(args, "plot_dir", None), filename_prefix=prefix)
+                except ValueError as exc:
+                    print(f"[Erro] {exc}")

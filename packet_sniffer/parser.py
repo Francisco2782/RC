@@ -187,6 +187,7 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
 
     event = PacketEvent(
         capture_id=0,
+        packet_time=float(packet.time),
         timestamp=_format_timestamp(float(packet.time)),
         interface=interface,
         protocol=protocol,
@@ -203,6 +204,7 @@ def parse_packet(packet, interface: str) -> tuple[PacketEvent, str, str]:
         size=len(bytes(packet)),
         summary=summary,
         reply_to_id=None,
+        rtt_ms=None,
     )
 
     return event, message_type, correlation_key

@@ -5,6 +5,7 @@ from typing import Optional
 @dataclass
 class PacketEvent:
     capture_id: int
+    packet_time: float
     timestamp: str
     interface: str
     protocol: str
@@ -21,6 +22,9 @@ class PacketEvent:
     size: int
     summary: str
     reply_to_id: Optional[int]
+    rtt_ms: Optional[float]
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+        
