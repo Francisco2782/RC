@@ -58,7 +58,7 @@ class OutputManager:
     def print_header(self):
         print(
             Colors.WHITE
-            + f"{'TIME':<10} {'SOURCE':<18} {'DESTINATION':<18} {'PROTO':<8} INFO"
+            + f"{'TIME':<10} {'SOURCE':<18} {'DESTINATION':<18} {'PROTO':<8} {'RTT(ms)':<10} INFO"
             + Colors.RESET
         )
         print("-" * 80)
@@ -82,8 +82,9 @@ class OutputManager:
 
         src = event.src_ip if event.src_ip else "-"
         dst = event.dst_ip if event.dst_ip else "-"
+        rtt = f"{event.rtt_ms:.3f}" if event.rtt_ms is not None else "-"
 
-        line = f"{now:<10} {src:<18} {dst:<18} {event.protocol:<8} {event.summary}"
+        line = f"{now:<10} {src:<18} {dst:<18} {event.protocol:<8} {rtt:<10} {event.summary}"
 
         if self.live:
             color = self.get_color(event.protocol)
@@ -99,6 +100,7 @@ class OutputManager:
                     "protocol": event.protocol,
                     "src_ip": src,
                     "dst_ip": dst,
+                    "rtt_ms": event.rtt_ms,
                     "summary": event.summary,
                 }
             )
@@ -110,6 +112,7 @@ class OutputManager:
                     event.protocol,
                     src,
                     dst,
+                    rtt,
                     event.summary,
                 ]
             )

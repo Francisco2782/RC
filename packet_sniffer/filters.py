@@ -185,8 +185,16 @@ def _matches_header_filter(packet, event: PacketEvent, expression: str) -> bool:
 
 
 def matches_filters(packet, event: PacketEvent, args: Namespace) -> bool:
-    if args.proto and event.protocol.upper() != args.proto.upper():
-        return False
+    if args.proto:
+        requested = args.proto.upper()
+        event_proto = (event.protocol or "").upper()
+        event_l3 = (event.l3_protocol or "").upper()
+
+        if requested in {"IP", "IPV4"}:
+            if event_l3 not in {"IPV4", "IP"}:
+                return False
+        elif event_proto != requested:
+            return False
 
     if args.ip and args.ip not in (event.src_ip, event.dst_ip):
         return False

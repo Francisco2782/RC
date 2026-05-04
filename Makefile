@@ -9,18 +9,10 @@ FORMAT ?= json
 help:
 	@echo "Targets:"
 	@echo "  make menu                 - abrir o menu interativo"
-	@echo "  make live IFACE=eth0      - captura em live"
-	@echo "  make log IFACE=eth0       - captura para ficheiro"
 	@echo "  make clean                - remover logs gerados"
 
 menu:
 	sudo $(PYTHON) $(APP) --menu
 
-live:
-	sudo $(PYTHON) $(APP) --iface $(IFACE) --live
-
-log:
-	sudo $(PYTHON) $(APP) --iface $(IFACE) --log $(LOG) --format $(FORMAT)
-
 clean:
-	sudo rm -f logs/*.json logs/*.csv logs/*.txt
+	sudo rm -f logs/*.json logs/*.csv logs/*.txt logs/plots/*.png

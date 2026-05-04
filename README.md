@@ -1,14 +1,29 @@
-# RC - TP2 Packet Sniffer (MVP)
+# Packet Sniffer
 
-Sniffer mínimo em Python para o trabalho de Redes de Computadores.
+Sniffer em Python para o trabalho de Redes de Computadores.
 
-## 1) Requisitos
+O programa faz captura passiva de pacotes, mostra-os na consola, guarda logs em ficheiro e pode gerar gráficos simples.
+
+## O que faz
+
+- captura de pacotes com Scapy
+- escolha da interface por linha de comando ou menu
+- modo live na consola
+- modo log em ficheiro
+- modo live + log
+- filtros por protocolo, IP, MAC, BPF e hfilter
+- identificação de ARP, IPv4, ICMP e DHCP
+- cálculo de RTT para replies ICMP
+- gráficos em PNG
+- menu interativo por números
+
+## Requisitos
 
 - Python 3.10+
-- Permissões root para captura em interface real
-- Interface de rede válida
+- permissões de root para capturar em interfaces reais
+- uma interface de rede válida
 
-## 2) Instalação
+## Instalação
 
 ```bash
 python -m venv .venv
@@ -16,45 +31,30 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 3) Descobrir interface
+Dependências principais:
+- scapy
+- matplotlib
+
+## Como ver a interface de rede
 
 ```bash
 ip -br link
 ```
 
 Exemplos comuns:
-- `wlp60s0` (Wi-Fi)
-- `enp61s0` (Ethernet)
+- `wlp60s0` para Wi-Fi
+- `enp61s0` para Ethernet
+- `eth0` no CORE
 
-## 4) Arranque rápido
+## Como correr no PC
 
-```bash
-sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live
-```
-
-### Atalhos com `make`
-
-```bash
-make menu
-make live IFACE=eth0
-make log IFACE=eth0
-```
-
-Se quiseres mudar o formato do log:
-
-```bash
-make log IFACE=eth0 FORMAT=csv LOG=logs/capture.csv
-```
-
-## 5) Modos de execução
-
-### Live (consola)
+### 1. Abrir em live
 
 ```bash
 sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live
 ```
 
-### Log em ficheiro
+### 2. Guardar num ficheiro
 
 ```bash
 sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --log logs/capture.json --format json
@@ -62,41 +62,46 @@ sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --log logs/capture.csv --form
 sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --log logs/capture.txt --format txt
 ```
 
-### Live + log
+### 3. Live + log
 
 ```bash
 sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live --log logs/capture.json --format json
 ```
 
-### Menu interativo no terminal
-
-```bash
-sudo ./.venv/bin/python sniffer.py --menu
-```
-
-Neste modo escolhes tudo por números:
-- interface
-- modo de saída
-- protocolo
-- IP
-- MAC
-- BPF
-- hfilter
-- número de pacotes
-
-### Captura limitada (teste)
+### 4. Captura curta para teste
 
 ```bash
 sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live --count 10
 ```
 
-## 6) Filtros
+### 5. Menu interativo
+
+```bash
+sudo ./.venv/bin/python sniffer.py --menu
+```
+
+No menu podes escolher:
+- interface
+- modo de saída
+- se queres gráficos
+- quais os gráficos
+- diretoria dos gráficos
+- filtros
+- número de pacotes
+
+## Como usar os filtros
 
 ### Por protocolo
 
 ```bash
 sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --proto ICMP --live
 ```
+
+Protocolos suportados:
+- ARP
+- IPv4
+- ICMP
+- DHCP
 
 ### Por IP
 
@@ -116,94 +121,110 @@ sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --mac aa:bb:cc:dd:ee:ff --liv
 sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --bpf "icmp or arp" --live
 ```
 
-### Por campos de cabeçalho (estilo Wireshark)
+### Por hfilter
 
 ```bash
-sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --hfilter "ip.src==172.26.22.44 and tcp.dstport==443" --live
-```
-
-Campos suportados:
-- `eth.src`, `eth.dst`
-- `ip.src`, `ip.dst`
-- `tcp.srcport`, `tcp.dstport`
-- `udp.srcport`, `udp.dstport`
-- `icmp.type`, `icmp.code`
-- `dns.id`, `dns.qr`, `dns.opcode`
-- `arp.op`
-- `frame.len`, `frame.interface`
-- `level`
-- `l2`, `l3`, `l4`, `proto`
-
-Operadores:
-- comparação: `==`, `!=`, `>`, `<`, `>=`, `<=`
-- lógicos: `and`, `or`, `not` (também `&&`, `||`, `!`)
-- parêntesis: `(` `)`
-
-Exemplos:
-
-```bash
-sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --hfilter "dns and dns.qr==0" --live
-sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --hfilter "tcp and (tcp.dstport==80 or tcp.dstport==443)" --live
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --hfilter "icmp and icmp.type==8" --live
 sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --hfilter "arp and arp.op==1" --live
 ```
 
-## 7) Formato da captura
+Campos úteis no hfilter:
+- `eth.src`, `eth.dst`
+- `ip.src`, `ip.dst`
+- `icmp.type`, `icmp.code`
+- `arp.op`
+- `frame.len`
+- `frame.interface`
+- `level`
+- `l2`, `l3`, `l4`, `proto`
 
-- Cada pacote recebe `capture_id` sequencial.
-- O campo `summary` mostra o nível efetivamente usado no pacote (`Nível=2`, `Nível=3` ou `Nível=4`) e portas quando existirem.
-- Quando não existir IP, são usados MAC de origem/destino em `src_ip` e `dst_ip`.
+## Gráficos
 
-Exemplo de `summary`:
-- `request(id=15) 172.26.22.44 -> 193.137.16.65 | Nível=4 ports=51020->53 | DNS query`
-- `reply(id=16) ao request(id=15) 193.137.16.65 -> 172.26.22.44 | Nível=4 ports=53->51020 | DNS response`
+Pode gerar gráficos em PNG depois da captura.
 
-## 8) Logs (json/csv/txt)
+Gráficos disponíveis:
+- `protocols` — distribuição por protocolo
+- `traffic` — pacotes por segundo
+- `rtt` — RTT dos replies ICMP
+- `sizes` — distribuição do tamanho dos pacotes
 
-- Em cada execução com `--log`, o ficheiro de saída é recriado (sem append entre execuções).
-- Isto aplica-se a `json`, `csv` e `txt`.
-
-Teste rápido de overwrite:
+Exemplo:
 
 ```bash
-sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --count 5 --log logs/capture.json --format json
-sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --count 3 --log logs/capture.json --format json
-wc -l logs/capture.json
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live --plot protocols
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live --plot rtt
+sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live --plot protocols --plot rtt --plot-dir logs/plots
 ```
 
-## 9) Protocolos identificados
+Por omissão, os gráficos são guardados em `logs/plots/`.
 
-- ARP
-- IPv4
-- ICMP
-- TCP
-- UDP
-- DHCP
-- DNS
+Os PNG têm nomes descritivos, por exemplo:
 
-## 10) Exemplo para CORE
+- `capture_eth0_24pkts_protocolos_20260504_153000.png`
+- `capture_eth0_24pkts_rtt_icmp_20260504_153001.png`
 
-No CORE, identifica a interface do nó onde o sniffer corre (tipicamente `eth0`) e usa:
+## Como correr no CORE
+
+No CORE a interface costuma ser `eth0`.
+
+### Live
+
+```bash
+sudo ./.venv/bin/python sniffer.py --iface eth0 --live
+```
+
+### Log
 
 ```bash
 sudo ./.venv/bin/python sniffer.py --iface eth0 --live --log logs/core.json --format json
 ```
 
-## 11) Troubleshooting
-
-- Usa sempre a venv no comando:
+### Testes úteis no CORE
 
 ```bash
-sudo ./.venv/bin/python sniffer.py --iface wlp60s0 --live
+sudo ./.venv/bin/python sniffer.py --iface eth0 --proto ARP --live --count 10
+sudo ./.venv/bin/python sniffer.py --iface eth0 --proto ICMP --live --count 10
+sudo ./.venv/bin/python sniffer.py --iface eth0 --proto DHCP --live --count 10
 ```
 
-- Se a interface não existir, confirma com:
+## O que sai na captura
 
-```bash
-ip -br link
-```
+Cada pacote mostra:
+- timestamp
+- interface
+- protocolo
+- endereços MAC e IP
+- tamanho
+- resumo do pacote
+- `reply_to_id` quando existe correlação
+- `rtt_ms` nos replies ICMP
 
-- Se faltar permissão de captura, executa com `sudo`.
+Exemplo de resumo:
 
-## 12) Nota de segurança
+- `request(id=15) 172.26.22.44 -> 193.137.16.65 | Nível=3 | ICMP echo request`
+- `reply(id=16) ao request(id=15) 193.137.16.65 -> 172.26.22.44 | RTT=12.345 ms | Nível=3 | ICMP echo reply`
 
-Uso apenas em redes autorizadas. O projeto implementa inspeção passiva (sem MITM/injection/deauth).
+## Ficheiros do projeto
+
+- `sniffer.py` — menu e arranque do programa
+- `packet_sniffer/capture.py` — captura e correlação
+- `packet_sniffer/parser.py` — interpretação dos pacotes
+- `packet_sniffer/filters.py` — filtros
+- `packet_sniffer/output.py` — consola e logs
+- `packet_sniffer/plots.py` — gráficos
+- `packet_sniffer/models.py` — modelo dos eventos
+
+## Dicas rápidas
+
+- confirma a interface com `ip -br link`
+- usa sempre a venv no comando
+- se faltarem permissões, executa com `sudo`
+- se os gráficos não aparecerem, confirma a instalação de `matplotlib`
+
+## Segurança
+
+Usar apenas em redes autorizadas. A captura é passiva.
+
+## Última atualização
+
+4 de maio de 2026

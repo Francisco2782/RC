@@ -11,7 +11,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Packet Sniffer MVP (RC TP2)")
     parser.add_argument("--iface", help="Interface de rede (ex: eth0, wlan0)")
     parser.add_argument("--menu", action="store_true", help="Abrir menu interativo no terminal")
-    parser.add_argument("--proto", help="Filtro por protocolo (ARP, IPv4, ICMP, TCP, UDP, DHCP, DNS)")
+    parser.add_argument("--proto", help="Filtro por protocolo (ARP, IPv4, ICMP, DHCP)")
     parser.add_argument("--ip", help="Filtro por IP (origem ou destino)")
     parser.add_argument("--mac", help="Filtro por MAC (origem ou destino)")
     parser.add_argument(
@@ -36,6 +36,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=0,
         help="Número de pacotes a capturar (0 = infinito)",
+    )
+    parser.add_argument(
+        "--plot",
+        dest="plots",
+        action="append",
+        choices=["protocols", "traffic", "rtt", "sizes"],
+        help="Gerar um gráfico após a captura (pode repetir)",
+    )
+    parser.add_argument(
+        "--plot-dir",
+        default="logs/plots",
+        help="Diretoria onde os gráficos PNG serão guardados (default: logs/plots)",
     )
     return parser
 
@@ -184,24 +196,69 @@ def _choose_protocol() -> str | None:
         print("  1) ARP")
         print("  2) IPv4")
         print("  3) ICMP")
-        print("  4) TCP")
-        print("  5) UDP")
-        print("  6) DHCP")
-        print("  7) DNS")
+        print("  4) DHCP")
         print("  ───────────────────────")
         print("  0) Voltar")
-        choice = _read_choice("Escolhe o protocolo: ", valid={"0", "1", "2", "3", "4", "5", "6", "7"})
+        choice = _read_choice("Escolhe o protocolo: ", valid={"0", "1", "2", "3", "4"})
         if choice == "0":
             raise IndexError
         return {
             "1": "ARP",
             "2": "IPv4",
             "3": "ICMP",
-            "4": "TCP",
-            "5": "UDP",
-            "6": "DHCP",
-            "7": "DNS",
+            "4": "DHCP",
         }[choice]
+
+
+def _choose_count(current_count: int) -> int:
+    while True:
+        _print_banner(" COUNT ")
+        print(f"Count atual: {current_count}")
+        print("Introduz o número de pacotes (0 = infinito)")
+        print("ENTER vazio mantém valor atual")
+        raw = _read_text("Novo count: ", allow_empty=True)
+
+        if raw == "":
+            return current_count
+        if raw.isdigit() and int(raw) >= 0:
+            return int(raw)
+
+        print("[Erro] Count inválido. Usa um número inteiro >= 0.")
+
+
+def _plot_label(plot_kind: str) -> str:
+    return {
+        "protocols": "Distribuição por protocolo",
+        "traffic": "Pacotes por segundo",
+        "rtt": "RTT ICMP",
+        "sizes": "Tamanho dos pacotes",
+    }.get(plot_kind, plot_kind)
+
+
+def _choose_plots() -> list[str]:
+    plots: list[str] = []
+
+    while True:
+        _print_banner(" GRÁFICOS ")
+        print("  Queres gerar um gráfico?")
+        print("  1) Sim")
+        print("  0) Não")
+
+        choice = _read_choice("Escolhe uma opção: ", valid={"0", "1"})
+        if choice == "0":
+            return plots
+
+        while True:
+            plot = _choose_plot()
+            if plot not in plots:
+                plots.append(plot)
+
+            print("\nQueres adicionar mais um gráfico?")
+            print("  1) Sim")
+            print("  0) Não")
+            more = _read_choice("Escolhe uma opção: ", valid={"0", "1"})
+            if more == "0":
+                return plots
 
 
 def _choose_filters(args: argparse.Namespace) -> argparse.Namespace:
@@ -214,14 +271,15 @@ def _choose_filters(args: argparse.Namespace) -> argparse.Namespace:
         print("  3) MAC")
         print("  4) BPF")
         print("  5) hfilter")
+        print("  6) Count")
         print("  ───────────────────────")
-        print("  6) Limpar filtros")
-        print("  7) Ver resumo")
+        print("  7) Limpar filtros")
+        print("  8) Ver resumo")
         print("  ───────────────────────")
-        print("  8) Iniciar captura")
+        print("  9) Iniciar captura")
         print("  0) Voltar")
 
-        choice = _read_choice("Escolhe uma opção: ", valid={"0", "1", "2", "3", "4", "5", "6", "7", "8"})
+        choice = _read_choice("Escolhe uma opção: ", valid={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"})
 
         if choice == "0":
             raise IndexError
@@ -239,13 +297,15 @@ def _choose_filters(args: argparse.Namespace) -> argparse.Namespace:
         elif choice == "5":
             current.hfilter = _read_text("Expressão hfilter (ENTER para limpar): ")
         elif choice == "6":
+            current.count = _choose_count(current.count)
+        elif choice == "7":
             current.proto = None
             current.ip = None
             current.mac = None
             current.hfilter = ""
             current.bpf = ""
             current.count = 0
-        elif choice == "7":
+        elif choice == "8":
             print("\n┌──────────────┬──────────────────┐")
             print("│    Resumo    │                  │")
             print("├──────────────┼──────────────────┤")
@@ -260,10 +320,39 @@ def _choose_filters(args: argparse.Namespace) -> argparse.Namespace:
             print(f"│ BPF          │ {current.bpf or '-':<16} │")
             print(f"│ HFilter      │ {current.hfilter or '-':<16} │")
             print(f"│ Count        │ {current.count:<16} │")
+            print(f"│ Plots        │ {', '.join(current.plots) if getattr(current, 'plots', None) else '-':<16} │")
+            print(f"│ Plot dir     │ {getattr(current, 'plot_dir', 'logs/plots'):<16} │")
             print("└──────────────┴──────────────────┘")
             input("\nPrima ENTER para voltar ao menu...")
-        elif choice == "8":
+        elif choice == "9":
             return current
+
+
+def _choose_plot() -> str | None:
+    while True:
+        _print_banner(" GRÁFICOS ")
+        print("  1) Distribuição por protocolo")
+        print("  2) Pacotes por segundo")
+        print("  3) RTT ICMP")
+        print("  4) Tamanho dos pacotes")
+        print("  ───────────────────────")
+        print("  0) Voltar")
+
+        choice = _read_choice("Escolhe o gráfico: ", valid={"0", "1", "2", "3", "4"})
+        if choice == "0":
+            raise IndexError
+        return {
+            "1": "protocols",
+            "2": "traffic",
+            "3": "rtt",
+            "4": "sizes",
+        }[choice]
+
+
+def _format_plots(plots: list[str] | None) -> str:
+    if not plots:
+        return "-"
+    return ", ".join(_plot_label(plot) for plot in plots)
 
 
 def _print_start_screen(args: argparse.Namespace) -> None:
@@ -278,8 +367,10 @@ def _print_start_screen(args: argparse.Namespace) -> None:
     print(f"  BPF       : {args.bpf or '-'}")
     print(f"  HFilter   : {args.hfilter or '-'}")
     print(f"  Count     : {args.count}")
+    print(f"  Plots     : {_format_plots(getattr(args, 'plots', None))}")
+    print(f"  Plot dir  : {getattr(args, 'plot_dir', 'logs/plots')}")
     print("\n" + "─" * 36)
-    print("  8) INICIAR CAPTURA AGORA")
+    print("  9) INICIAR CAPTURA AGORA")
     print("  0) VOLTAR ATRÁS")
     print("─" * 36)
 
@@ -309,6 +400,12 @@ def _interactive_menu(args: argparse.Namespace) -> argparse.Namespace:
                 except IndexError:
                     continue
 
+    current.plots = _choose_plots()
+    if current.plots:
+        current.plot_dir = _read_text("Diretoria para gráficos (ENTER para usar logs/plots): ") or "logs/plots"
+    else:
+        current.plot_dir = "logs/plots"
+
     while True:
         try:
             style = _choose_capture_style()
@@ -331,8 +428,10 @@ def _interactive_menu(args: argparse.Namespace) -> argparse.Namespace:
             current.mac = None
             current.hfilter = ""
             current.bpf = ""
-            current.count = 0
+            current.count = _choose_count(current.count)
+
             print("\n[Estado] Captura sem filtros selecionada.")
+            print(f"[Estado] Plots={_format_plots(getattr(current, 'plots', None))} | Plot dir={getattr(current, 'plot_dir', 'logs/plots')}")
             return current
 
         while True:
@@ -346,7 +445,7 @@ def _interactive_menu(args: argparse.Namespace) -> argparse.Namespace:
             continue
 
         print("\n[Estado] Captura com filtros selecionada.")
-        print(f"[Estado] Proto={current.proto or '-'} | IP={current.ip or '-'} | MAC={current.mac or '-'} | BPF={current.bpf or '-'} | HFilter={current.hfilter or '-'}")
+        print(f"[Estado] Proto={current.proto or '-'} | IP={current.ip or '-'} | MAC={current.mac or '-'} | BPF={current.bpf or '-'} | HFilter={current.hfilter or '-'} | Plots={_format_plots(getattr(current, 'plots', None))}")
         return current
 
 
